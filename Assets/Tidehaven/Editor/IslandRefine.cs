@@ -1,0 +1,15 @@
+using UnityEngine;
+using UnityEditor;
+using UnityEditor.SceneManagement;
+using System.Linq;
+public static class IslandRefine {
+ public static string Run(){if(EditorApplication.isPlaying)throw new System.Exception("Exit Play first");var game=Object.FindFirstObjectByType<TidehavenGame>();int removed=0;foreach(var t in Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Where(t=>t.name=="Ink Outline").ToArray()){Object.DestroyImmediate(t.gameObject);removed++;}
+ var terrain=GameObject.Find("Sandy coast and seabed");var done=GameObject.Find("Island hills applied");if(!done){
+ foreach(var f in Object.FindObjectsByType<MeshFilter>(FindObjectsSortMode.None)){if(f.gameObject!=terrain && !new[]{"Western palm grove","Eastern berry grove","Northern gardens","Western palm grove grasses","Eastern berry grove grasses","Northern gardens grasses"}.Contains(f.name))continue;var mesh=Object.Instantiate(f.sharedMesh);var vs=mesh.vertices;for(int i=0;i<vs.Length;i++){Vector3 p=f.transform.TransformPoint(vs[i]);p.y+=TidehavenGame.Hill(p.x,p.z);vs[i]=f.transform.InverseTransformPoint(p);}mesh.vertices=vs;mesh.RecalculateNormals();mesh.RecalculateBounds();AssetDatabase.CreateAsset(mesh,"Assets/Tidehaven/Meshes/Island_"+f.name.Replace(" ","_")+".asset");f.sharedMesh=mesh;var col=f.GetComponent<MeshCollider>();if(col)col.sharedMesh=mesh;}
+ foreach(var root in new[]{"Nature • palms, grasses and shore rocks","Harbor"}){var parent=GameObject.Find(root);if(parent)foreach(Transform t in parent.transform){if(t.GetComponent<MeshFilter>() && t.name.Contains("grove")||t.name.StartsWith("Northern gardens"))continue;t.position+=Vector3.up*TidehavenGame.Hill(t.position.x,t.position.z);}}
+ new GameObject("Island hills applied");}
+ var water=Object.FindObjectsByType<Renderer>(FindObjectsSortMode.None).First(r=>r.sharedMaterial&&r.sharedMaterial.shader.name=="UberStylizedWater").sharedMaterial;
+ water.SetColor("_Color_Shallow",new Color(.12f,.70f,.57f,.55f));water.SetColor("_Color_Deep",new Color(.015f,.32f,.34f,.95f));water.SetFloat("_Water_Depth",.65f);water.SetFloat("_Enable_SurfaceFoam",0);water.SetFloat("_Specular_Spread",.1f);water.SetColor("_Specular_Color",new Color(.15f,.22f,.22f,1));water.SetFloat("_Normal_Strength",.025f);water.SetFloat("_Normal_Scale",1.5f);water.SetFloat("_Caustics_Strength",.3f);water.SetFloat("_Caustics_Scale",.65f);water.SetFloat("_Enable_Intersection",1);water.SetFloat("_InterSec_Width",.18f);water.SetFloat("_InterSec_Dissolve",1.1f);water.SetFloat("_ENABLESHORELINE",1);water.EnableKeyword("_ENABLESHORELINE");water.SetFloat("_SL_Ammount",1.1f);water.SetFloat("_SL_Thickness",.17f);water.SetFloat("_SL_WaterDepth",.45f);water.SetFloat("_SL_Speed",.12f);water.SetFloat("_1st_Wave_Height",.012f);water.SetFloat("_2nd_Wave_Height",.008f);EditorUtility.SetDirty(water);
+ EditorSceneManager.MarkSceneDirty(game.gameObject.scene);EditorSceneManager.SaveOpenScenes();AssetDatabase.SaveAssets();return "Removed "+removed+" outlines; hills and water updated";
+ }
+}
